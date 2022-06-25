@@ -304,6 +304,17 @@ pub fn canonicalize<P: AsRef<Path>>(
         dunce::canonicalize(current_dir)?.join(original)
     };
 
+    let check_if_directory = match miss_mode {
+        MissingHandling::Normal | MissingHandling::Existing => {
+            original
+                .as_os_str()
+                .to_string_lossy()
+                .ends_with(std::path::MAIN_SEPARATOR)
+        }
+        _ => false
+    };
+
+
     let mut result = PathBuf::new();
     let mut parts = vec![];
 
@@ -378,6 +389,12 @@ pub fn canonicalize<P: AsRef<Path>>(
                 }
             }
             Ok(path) => {
+                if check_if_directory {
+                    if !path.is_dir() {
+                        // TODO change to ErrorKind::NotADirectory, when stable
+                        return Err(IOError::from_raw_os_error(20));
+                    }
+                }
                 result = path;
             }
         }
