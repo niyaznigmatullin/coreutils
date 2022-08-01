@@ -403,7 +403,7 @@ jobs:
               FAIL=$(sed -n "s/.*# FAIL: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
               XPASS=$(sed -n "s/.*# XPASS: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
               ERROR=$(sed -n "s/.*# ERROR: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
-              if [[ "$TOTAL" -eq 0 || "$TOTAL" -eq 1 ]]; then
+              if [[ "$TOTAL" -eq 0 ]]; then
                 echo "::error ::Failed to parse test results from '${SUITE_LOG_FILE}'; failing early"
                 exit 1
               fi
