@@ -299,3 +299,152 @@ jobs:
         flags: gnutests
         name: gnutests
         working-directory: uutils
+
+  f_headers:
+    permissions:
+      actions: read  # for dawidd6/action-download-artifact to query and download artifacts
+      contents: read  # for actions/checkout to fetch code
+      pull-requests: read  # for dawidd6/action-download-artifact to query commit hash
+    name: Run GNU tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Initialize workflow variables
+        id: vars
+        shell: bash
+        run: |
+          ## VARs setup
+          outputs() { step_id="vars"; for var in "$@" ; do echo steps.${step_id}.outputs.${var}="${!var}"; echo ::set-output name=${var}::${!var}; done; }
+          # * config
+          path_GNU="gnu"
+          path_GNU_tests="${path_GNU}/tests"
+          path_UUTILS="uutils"
+          path_reference="reference"
+          outputs path_GNU path_GNU_tests path_reference path_UUTILS
+          #
+          repo_default_branch="${{ github.event.repository.default_branch }}"
+          repo_GNU_ref="v9.1"
+          repo_reference_branch="${{ github.event.repository.default_branch }}"
+          outputs repo_default_branch repo_GNU_ref repo_reference_branch
+          #
+          SUITE_LOG_FILE="${path_GNU_tests}/test-suite.log"
+          TEST_LOGS_GLOB="${path_GNU_tests}/**/*.log" ## note: not usable at bash CLI; [why] double globstar not enabled by default b/c MacOS includes only bash v3 which doesn't have double globstar support
+          TEST_FILESET_PREFIX='test-fileset-IDs.sha1#'
+          TEST_FILESET_SUFFIX='.txt'
+          TEST_SUMMARY_FILE='gnu-result.json'
+          TEST_FULL_SUMMARY_FILE='gnu-full-result.json'
+          outputs SUITE_LOG_FILE TEST_FILESET_PREFIX TEST_FILESET_SUFFIX TEST_LOGS_GLOB TEST_SUMMARY_FILE TEST_FULL_SUMMARY_FILE
+      - name: Checkout code (uutil)
+        uses: actions/checkout@v3
+        with:
+          path: '${{ steps.vars.outputs.path_UUTILS }}'
+      - name: Checkout code (GNU coreutils)
+        uses: actions/checkout@v3
+        with:
+          repository: 'coreutils/coreutils'
+          path: '${{ steps.vars.outputs.path_GNU }}'
+          ref: ${{ steps.vars.outputs.repo_GNU_ref }}
+          submodules: recursive
+      - name: Install `rust` toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          profile: minimal # minimal component installation (ie, no documentation)
+          components: rustfmt
+      - name: Install dependencies
+        shell: bash
+        run: |
+          ## Install dependencies
+          sudo apt-get update
+          sudo apt-get install autoconf autopoint bison texinfo gperf gcc g++ gdb python-pyinotify jq valgrind libexpect-perl
+      - name: Add various locales
+        shell: bash
+        run: |
+          echo "Before:"
+          locale -a
+          ## Some tests fail with 'cannot change locale (en_US.ISO-8859-1): No such file or directory'
+          ## Some others need a French locale
+          sudo locale-gen
+          sudo locale-gen fr_FR
+          sudo locale-gen fr_FR.UTF-8
+          sudo update-locale
+          echo "After:"
+          locale -a
+      - name: Build binaries
+        shell: bash
+        run: |
+          ## Build binaries
+          cd '${{ steps.vars.outputs.path_UUTILS }}'
+          bash util/build-gnu.sh
+      - name: Run GNU tests
+        shell: bash
+        run: |
+          path_GNU='${{ steps.vars.outputs.path_GNU }}'
+          path_UUTILS='${{ steps.vars.outputs.path_UUTILS }}'
+          bash "${path_UUTILS}/util/run-gnu-test.sh" "tests/tail-2/F-headers.sh"
+      - name: Extract testing info into JSON
+        shell: bash
+        run : |
+          path_UUTILS='${{ steps.vars.outputs.path_UUTILS }}'
+          python ${path_UUTILS}/util/gnu-json-result.py ${{ steps.vars.outputs.path_GNU_tests }} > ${{ steps.vars.outputs.TEST_FULL_SUMMARY_FILE }}
+      - name: Extract/summarize testing info
+        id: summary
+        shell: bash
+        run: |
+          ## Extract/summarize testing info
+          outputs() { step_id="summary"; for var in "$@" ; do echo steps.${step_id}.outputs.${var}="${!var}"; echo ::set-output name=${var}::${!var}; done; }
+          #
+          SUITE_LOG_FILE='${{ steps.vars.outputs.SUITE_LOG_FILE }}'
+          if test -f "${SUITE_LOG_FILE}"
+          then
+              TOTAL=$(sed -n "s/.*# TOTAL: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              PASS=$(sed -n "s/.*# PASS: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              SKIP=$(sed -n "s/.*# SKIP: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              FAIL=$(sed -n "s/.*# FAIL: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              XPASS=$(sed -n "s/.*# XPASS: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              ERROR=$(sed -n "s/.*# ERROR: \(.*\)/\1/p" "${SUITE_LOG_FILE}" | tr -d '\r' | head -n1)
+              if [[ "$TOTAL" -eq 0 || "$TOTAL" -eq 1 ]]; then
+                echo "::error ::Failed to parse test results from '${SUITE_LOG_FILE}'; failing early"
+                exit 1
+              fi
+              output="GNU tests summary = TOTAL: $TOTAL / PASS: $PASS / FAIL: $FAIL / ERROR: $ERROR / SKIP: $SKIP"
+              echo "${output}"
+              if [[ "$FAIL" -gt 0 || "$ERROR" -gt 0 ]]; then echo "::warning ::${output}" ; fi
+              jq -n \
+                    --arg date "$(date --rfc-email)" \
+                    --arg sha "$GITHUB_SHA" \
+                    --arg total "$TOTAL" \
+                    --arg pass "$PASS" \
+                    --arg skip "$SKIP" \
+                    --arg fail "$FAIL" \
+                    --arg xpass "$XPASS" \
+                    --arg error "$ERROR" \
+                    '{($date): { sha: $sha, total: $total, pass: $pass, skip: $skip, fail: $fail, xpass: $xpass, error: $error, }}' > '${{ steps.vars.outputs.TEST_SUMMARY_FILE }}'
+              HASH=$(sha1sum '${{ steps.vars.outputs.TEST_SUMMARY_FILE }}' | cut --delim=" " -f 1)
+              outputs HASH
+            else
+              echo "::error ::Failed to find summary of test results (missing '${SUITE_LOG_FILE}'); failing early"
+              exit 1
+            fi
+            # Compress logs before upload (fails otherwise)
+            gzip ${{ steps.vars.outputs.TEST_LOGS_GLOB }}
+      - name: Reserve SHA1/ID of 'test-summary'
+        uses: actions/upload-artifact@v3
+        with:
+          name: "${{ steps.summary.outputs.HASH }}"
+          path: "${{ steps.vars.outputs.TEST_SUMMARY_FILE }}"
+      - name: Reserve test results summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-summary
+          path: "${{ steps.vars.outputs.TEST_SUMMARY_FILE }}"
+      - name: Reserve test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-logs
+          path: "${{ steps.vars.outputs.TEST_LOGS_GLOB }}"
+      - name: Upload full json results
+        uses: actions/upload-artifact@v3
+        with:
+          name: gnu-full-result.json
+          path: ${{ steps.vars.outputs.TEST_FULL_SUMMARY_FILE }}
