@@ -328,7 +328,7 @@ dependencies = [
  "glob",
  "hex-literal",
  "libc",
- "nix",
+ "nix 0.24.2",
  "once_cell",
  "phf",
  "phf_codegen",
@@ -663,11 +663,11 @@ dependencies = [
 
 [[package]]
 name = "ctrlc"
-version = "3.2.2"
+version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b37feaa84e6861e00a1f5e5aa8da3ee56d605c9992d33e082786754828e20865"
+checksum = "1d91974fbbe88ec1df0c24a4f00f99583667a7e2e6272b2b92d294d81e462173"
 dependencies = [
- "nix",
+ "nix 0.25.0",
  "winapi 0.3.9",
 ]
 
@@ -1060,9 +1060,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.126"
+version = "0.2.131"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349d5a591cd28b49e1d1037471617a32ddcda5731b99419008085f72d5a53836"
+checksum = "04c3b4822ccebfa39c02fc03d1534441b22ead323fa0f48bb7ddd8e6ba076a40"
 
 [[package]]
 name = "libloading"
@@ -1134,9 +1134,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memmap2"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a79b39c93a7a5a27eeaf9a23b5ff43f1b9e0ad6b1cdd441140ae53c35613fc7"
+checksum = "8e2e4455be2010e8c5e77f0d10234b30f3a636a5305725609b5a71ad00d22577"
 dependencies = [
  "libc",
 ]
@@ -1190,6 +1190,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e322c04a9e3440c327fca7b6c8a63e6890a32fa2ad689db972425f07e0d22abb"
+dependencies = [
+ "autocfg",
+ "bitflags",
+ "cfg-if 1.0.0",
+ "libc",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1201,9 +1213,9 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "5.0.0-pre.15"
+version = "5.0.0-pre.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "553f9844ad0b0824605c20fb55a661679782680410abfb1a8144c2e7e437e7a7"
+checksum = "530f6314d6904508082f4ea424a0275cf62d341e118b313663f266429cb19693"
 dependencies = [
  "bitflags",
  "crossbeam-channel",
@@ -1970,18 +1982,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.31"
+version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd829fe32373d27f76265620b5309d0340cb8550f523c1dda251d6298069069a"
+checksum = "f5f6586b7f764adc0231f4c79be7b920e766bb2f3e51b3661cdb263828f19994"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.31"
+version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0396bc89e626244658bef819e22d0cc459e795a5ebe878e6ec336d1674a8d79a"
+checksum = "12bafc5b54507e0149cdf1b145a5d80ab80a90bcd9275df43d4fff68460f6c21"
 dependencies = [
  "proc-macro2",
  "quote 1.0.18",
@@ -2142,7 +2154,7 @@ version = "0.0.14"
 dependencies = [
  "atty",
  "clap 3.2.15",
- "nix",
+ "nix 0.24.2",
  "thiserror",
  "unix_socket",
  "uucore",
@@ -2481,7 +2493,7 @@ name = "uu_kill"
 version = "0.0.14"
 dependencies = [
  "clap 3.2.15",
- "nix",
+ "nix 0.24.2",
  "uucore",
 ]
 
@@ -2571,7 +2583,7 @@ dependencies = [
  "atty",
  "clap 3.2.15",
  "crossterm",
- "nix",
+ "nix 0.24.2",
  "unicode-segmentation",
  "unicode-width",
  "uucore",
@@ -2592,7 +2604,7 @@ version = "0.0.14"
 dependencies = [
  "clap 3.2.15",
  "libc",
- "nix",
+ "nix 0.24.2",
  "uucore",
 ]
 
@@ -2898,7 +2910,7 @@ version = "0.0.14"
 dependencies = [
  "clap 3.2.15",
  "libc",
- "nix",
+ "nix 0.24.2",
  "notify",
  "uucore",
  "winapi 0.3.9",
@@ -2931,7 +2943,7 @@ version = "0.0.14"
 dependencies = [
  "clap 3.2.15",
  "libc",
- "nix",
+ "nix 0.24.2",
  "uucore",
 ]
 
@@ -3059,7 +3071,7 @@ dependencies = [
  "bytecount",
  "clap 3.2.15",
  "libc",
- "nix",
+ "nix 0.24.2",
  "unicode-width",
  "utf-8",
  "uucore",
@@ -3089,7 +3101,7 @@ version = "0.0.14"
 dependencies = [
  "clap 3.2.15",
  "libc",
- "nix",
+ "nix 0.24.2",
  "uucore",
 ]
 
@@ -3105,7 +3117,7 @@ dependencies = [
  "glob",
  "itertools",
  "libc",
- "nix",
+ "nix 0.24.2",
  "once_cell",
  "os_display",
  "thiserror",

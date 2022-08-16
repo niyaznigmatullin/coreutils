@@ -18,7 +18,7 @@ path = "src/sort.rs"
 binary-heap-plus = "0.4.1"
 clap = { version = "3.2", features = ["wrap_help", "cargo"] }
 compare = "0.1.0"
-ctrlc = { version = "3.0", features = ["termination"] }
+ctrlc = { version = "3.2", features = ["termination"] }
 fnv = "1.0.7"
 itertools = "0.10.0"
 memchr = "2.5.0"
