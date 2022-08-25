@@ -1,0 +1,24 @@
+[package]
+name = "uu_chr"
+version = "0.0.15"
+authors = ["uutils developers"]
+license = "MIT"
+description = "chr ~ (uutils) just to test chrono 0.4.19 -> 0.4.22"
+
+homepage = "https://github.com/uutils/coreutils"
+repository = "https://github.com/uutils/coreutils/tree/main/src/uu/chr"
+keywords = ["coreutils", "uutils", "cross-platform", "cli", "utility"]
+categories = ["command-line-utilities"]
+edition = "2021"
+
+[lib]
+path = "src/chr.rs"
+
+[dependencies]
+uucore = { version=">=0.0.15", package="uucore", path="../../uucore", features=["entries"] }
+chrono = { version="^0.4.19", default-features=false, features=["std", "alloc", "clock"]}
+clap = { version = "3.2", features = ["wrap_help", "cargo"] }
+
+[[bin]]
+name = "chr"
+path = "src/main.rs"
