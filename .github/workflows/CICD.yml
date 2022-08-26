@@ -856,7 +856,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [28]
+        api-level: [29]
         target: [default]
         arch: [x86] # , arm64-v8a
     env:
