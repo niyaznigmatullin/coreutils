@@ -1390,8 +1390,9 @@ fn test_closes_file_descriptors() {
 
     // For debugging purposes:
     for f in me.fd().unwrap() {
-        let _fd = f.unwrap();
-        // println!("{:?} {:?}", fd, fd.mode());
+        let fd = f.unwrap();
+        let _mode = fd.mode();
+        // println!("{:?} {:?}", fd, mode);
     }
 
     new_ucmd!()
