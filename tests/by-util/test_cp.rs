@@ -1388,11 +1388,11 @@ fn test_closes_file_descriptors() {
     let number_file_already_opened: u64 = me.fd_count().unwrap().try_into().unwrap();
     let _limit_fd: u64 = number_file_already_opened + 9;
 
-    // // For debugging purposes:
-    // for f in me.fd().unwrap() {
-    //     let fd = f.unwrap();
-    //     println!("{:?} {:?}", fd, fd.mode());
-    // }
+    // For debugging purposes:
+    for f in me.fd().unwrap() {
+        let fd = f.unwrap();
+        println!("{:?} {:?}", fd, fd.mode());
+    }
 
     new_ucmd!()
         .arg("-r")
