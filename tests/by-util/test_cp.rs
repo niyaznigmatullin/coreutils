@@ -1387,7 +1387,7 @@ fn test_closes_file_descriptors() {
     // So, we take in account the various fd to increase the limit
     let number_file_already_opened: u64 = me.fd_count().unwrap().try_into().unwrap();
     let limit_fd: u64 = number_file_already_opened + 9;
-    let _ = me.fd();
+    let _ = me.fd().unwrap();
     // // For debugging purposes:
     // for f in me.fd().unwrap() {
     //     let fd = f.unwrap();
