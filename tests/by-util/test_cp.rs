@@ -1389,9 +1389,9 @@ fn test_closes_file_descriptors() {
     let _limit_fd: u64 = number_file_already_opened + 9;
 
     // For debugging purposes:
-    for f in me.fd().unwrap() {
-        let fd = f.unwrap();
-        println!("{:?} {:?}", fd, fd.mode());
+    for _f in me.fd().unwrap() {
+        // let fd = f.unwrap();
+        // println!("{:?} {:?}", fd, fd.mode());
     }
 
     new_ucmd!()
