@@ -1380,13 +1380,13 @@ fn test_cp_reflink_insufficient_permission() {
 #[test]
 fn test_closes_file_descriptors() {
     use procfs::process::Process;
-    let _me = Process::myself().unwrap();
+    let me = Process::myself().unwrap();
 
-    // // The test suite runs in parallel, we have pipe, sockets
-    // // opened by other tests.
-    // // So, we take in account the various fd to increase the limit
-    // let number_file_already_opened: u64 = me.fd_count().unwrap().try_into().unwrap();
-    // let limit_fd: u64 = number_file_already_opened + 9;
+    // The test suite runs in parallel, we have pipe, sockets
+    // opened by other tests.
+    // So, we take in account the various fd to increase the limit
+    let number_file_already_opened: u64 = me.fd_count().unwrap().try_into().unwrap();
+    let _limit_fd: u64 = number_file_already_opened + 9;
 
     // // For debugging purposes:
     // for f in me.fd().unwrap() {
