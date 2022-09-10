@@ -17,6 +17,7 @@ path = "src/chroot.rs"
 [dependencies]
 clap = { version = "3.2", features = ["wrap_help", "cargo"] }
 uucore = { version=">=0.0.15", package="uucore", path="../../uucore", features=["entries"] }
+nix = { version = "0.25.0", default-features = false }
 
 [[bin]]
 name = "chroot"

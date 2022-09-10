@@ -12,8 +12,11 @@ use uucore::error::UError;
 /// Errors that can happen while executing chroot.
 #[derive(Debug)]
 pub enum ChrootError {
-    /// Failed to enter the specified directory.
-    CannotEnter(String, Error),
+    /// Failed to change root to the specified directory.
+    CannotChroot(String, Error),
+
+    /// Failed to change dir to the root directory.
+    CannotChdirRoot(Error),
 
     /// Failed to execute the specified command.
     CommandFailed(String, Error),
@@ -38,6 +41,9 @@ pub enum ChrootError {
 
     /// The call to `setuid()` failed.
     SetUserFailed(String, Error),
+
+    /// Can't use `--skip-chdir` if `NEWROOT` is not old root
+    WrongSkipChdirUsage,
 }
 
 impl std::error::Error for ChrootError {}
@@ -55,7 +61,10 @@ impl UError for ChrootError {
 impl Display for ChrootError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::CannotEnter(s, e) => write!(f, "cannot chroot to {}: {}", s.quote(), e,),
+            Self::CannotChroot(s, e) => {
+                write!(f, "cannot chroot to {}: {}", s.quote(), e,)
+            }
+            Self::CannotChdirRoot(e) => write!(f, "cannot chdir to root directory: {}", e),
             Self::CommandFailed(s, e) => {
                 write!(f, "failed to run command {}: {}", s.to_string().quote(), e,)
             }
@@ -76,6 +85,10 @@ impl Display for ChrootError {
             Self::SetUserFailed(s, e) => {
                 write!(f, "cannot set user to {}: {}", s.maybe_quote(), e)
             }
+            Self::WrongSkipChdirUsage => write!(
+                f,
+                "option --skip-chdir only permitted if NEWROOT is old '/'"
+            ),
         }
     }
 }

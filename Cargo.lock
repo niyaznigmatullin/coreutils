@@ -2138,6 +2138,7 @@ name = "uu_chroot"
 version = "0.0.15"
 dependencies = [
  "clap",
+ "nix",
  "uucore",
 ]
 

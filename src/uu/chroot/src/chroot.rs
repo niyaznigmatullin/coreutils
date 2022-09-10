@@ -11,12 +11,11 @@ mod error;
 
 use crate::error::ChrootError;
 use clap::{crate_version, Arg, Command};
-use std::ffi::CString;
-use std::io::Error;
+use nix::unistd::{chdir, chroot, setgid, setgroups, setuid, Gid};
 use std::path::Path;
 use std::process;
 use uucore::error::{set_exit_code, UResult};
-use uucore::libc::{self, chroot, setgid, setgroups, setuid};
+use uucore::fs::{canonicalize, MissingHandling, ResolveMode};
 use uucore::{entries, format_usage};
 
 static ABOUT: &str = "Run COMMAND with root directory set to NEWROOT.";
@@ -29,6 +28,7 @@ mod options {
     pub const GROUPS: &str = "groups";
     pub const USERSPEC: &str = "userspec";
     pub const COMMAND: &str = "command";
+    pub const SKIP_CHDIR: &str = "skip-chdir";
 }
 
 #[uucore::main]
@@ -137,6 +137,11 @@ pub fn uu_app<'a>() -> Command<'a> {
                 .value_name("USER:GROUP"),
         )
         .arg(
+            Arg::new(options::SKIP_CHDIR)
+                .long(options::SKIP_CHDIR)
+                .help("Do not change working directory to '/'"),
+        )
+        .arg(
             Arg::new(options::COMMAND)
                 .value_hint(clap::ValueHint::CommandName)
                 .hide(true)
@@ -167,7 +172,17 @@ fn set_context(root: &Path, options: &clap::ArgMatches) -> UResult<()> {
         (userspec[0], userspec[1])
     };
 
-    enter_chroot(root)?;
+    let skip_chdir = options.is_present(options::SKIP_CHDIR);
+
+    if skip_chdir {
+        if let Ok(path) = canonicalize(root, MissingHandling::Existing, ResolveMode::Physical) {
+            if path.to_str().map(|p_str| p_str != "/").unwrap_or(true) {
+                return Err(ChrootError::WrongSkipChdirUsage.into());
+            }
+        }
+    }
+
+    enter_chroot(root, skip_chdir)?;
 
     set_groups_from_str(groups_str)?;
     set_main_group(group)?;
@@ -175,16 +190,13 @@ fn set_context(root: &Path, options: &clap::ArgMatches) -> UResult<()> {
     Ok(())
 }
 
-fn enter_chroot(root: &Path) -> UResult<()> {
-    std::env::set_current_dir(root).unwrap();
-    let err = unsafe {
-        chroot(CString::new(".").unwrap().as_bytes_with_nul().as_ptr() as *const libc::c_char)
-    };
-    if err == 0 {
-        Ok(())
-    } else {
-        Err(ChrootError::CannotEnter(format!("{}", root.display()), Error::last_os_error()).into())
+fn enter_chroot(root: &Path, skip_chdir: bool) -> UResult<()> {
+    chroot(root)
+        .map_err(|err| ChrootError::CannotChroot(format!("{}", root.display()), err.into()))?;
+    if !skip_chdir {
+        chdir("/").map_err(|err| ChrootError::CannotChdirRoot(err.into()))?;
     }
+    Ok(())
 }
 
 fn set_main_group(group: &str) -> UResult<()> {
@@ -193,24 +205,11 @@ fn set_main_group(group: &str) -> UResult<()> {
             Ok(g) => g,
             _ => return Err(ChrootError::NoSuchGroup(group.to_string()).into()),
         };
-        let err = unsafe { setgid(group_id) };
-        if err != 0 {
-            return Err(
-                ChrootError::SetGidFailed(group_id.to_string(), Error::last_os_error()).into(),
-            );
+        if let Err(err) = setgid(group_id.into()) {
+            return Err(ChrootError::SetGidFailed(group_id.to_string(), err.into()).into());
         }
     }
     Ok(())
-}
-
-#[cfg(any(target_vendor = "apple", target_os = "freebsd"))]
-fn set_groups(groups: &[libc::gid_t]) -> libc::c_int {
-    unsafe { setgroups(groups.len() as libc::c_int, groups.as_ptr()) }
-}
-
-#[cfg(any(target_os = "linux", target_os = "android"))]
-fn set_groups(groups: &[libc::gid_t]) -> libc::c_int {
-    unsafe { setgroups(groups.len() as libc::size_t, groups.as_ptr()) }
 }
 
 fn set_groups_from_str(groups: &str) -> UResult<()> {
@@ -218,14 +217,13 @@ fn set_groups_from_str(groups: &str) -> UResult<()> {
         let mut groups_vec = vec![];
         for group in groups.split(',') {
             let gid = match entries::grp2gid(group) {
-                Ok(g) => g,
+                Ok(g) => Gid::from(g),
                 Err(_) => return Err(ChrootError::NoSuchGroup(group.to_string()).into()),
             };
             groups_vec.push(gid);
         }
-        let err = set_groups(&groups_vec);
-        if err != 0 {
-            return Err(ChrootError::SetGroupsFailed(Error::last_os_error()).into());
+        if let Err(e) = setgroups(&groups_vec) {
+            return Err(ChrootError::SetGroupsFailed(e.into()).into());
         }
     }
     Ok(())
@@ -234,11 +232,8 @@ fn set_groups_from_str(groups: &str) -> UResult<()> {
 fn set_user(user: &str) -> UResult<()> {
     if !user.is_empty() {
         let user_id = entries::usr2uid(user).unwrap();
-        let err = unsafe { setuid(user_id as libc::uid_t) };
-        if err != 0 {
-            return Err(
-                ChrootError::SetUserFailed(user.to_string(), Error::last_os_error()).into(),
-            );
+        if let Err(err) = setuid(user_id.into()) {
+            return Err(ChrootError::SetUserFailed(user.to_string(), err.into()).into());
         }
     }
     Ok(())
