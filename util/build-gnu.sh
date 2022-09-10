@@ -49,6 +49,9 @@ for sum in b2sum b3sum md5sum sha1sum sha224sum sha256sum sha384sum sha512sum; d
 done
 test -f "${UU_BUILD_DIR}/[" || cp "${UU_BUILD_DIR}/test" "${UU_BUILD_DIR}/["
 
+
+UUTILS_VERSION=`sed -nE 's/^\s*version\s*=\s*"([^"]*)"\s*/\1/p' ${path_UUTILS}/Cargo.toml | head -n 1`
+
 ##
 
 cd "${path_GNU}" && echo "[ pwd:'${PWD}' ]"
@@ -183,7 +186,9 @@ sed -i "s/  {ERR=>\"\$prog: foobar\\\\n\" \. \$try_help }/  {ERR=>\"error: Found
 sed -i "s/  {ERR_SUBST=>\"s\/(unrecognized|unknown) option \[-' \]\*foobar\[' \]\*\/foobar\/\"}],//" tests/misc/basenc.pl
 
 # Remove the check whether a util was built. Otherwise tests against utils like "arch" are not run.
-sed -i "s|require_built_ |# require_built_ |g" init.cfg
+sed -i "s|^\s+require_built_ |# require_built_ |g" init.cfg
+
+sed -i "s|\$PACKAGE_VERSION|$UUTILS_VERSION|" init.cfg
 
 # usage_vs_getopt.sh is heavily modified as it runs all the binaries
 # with the option -/ is used, clap is returning a better error than GNU's. Adjust the GNU test
