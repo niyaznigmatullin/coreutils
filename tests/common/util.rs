@@ -1114,6 +1114,10 @@ impl UCommand {
                 if let Err(e) = write_result {
                     panic!("failed to write to stdin of child: {}", e);
                 }
+            } else {
+                if let Err(e) = write_result {
+                    eprintln!("failed to write to stdin of child: {}", e);
+                }
             }
         }
 
