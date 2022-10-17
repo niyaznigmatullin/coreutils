@@ -9,7 +9,7 @@
 
 //! Set of functions to manage file systems
 
-// spell-checker:ignore DATETIME subsecond (arch) bitrig ; (fs) cifs smbfs
+// spell-checker:ignore DATETIME subsecond (arch) bitrig ; (fs) cifs smbfs HSTRING PCWSTR hresult
 
 extern crate time;
 use time::macros::format_description;
@@ -32,31 +32,14 @@ use std::ffi::OsStr;
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
 #[cfg(windows)]
-use winapi::shared::minwindef::DWORD;
+use windows::core::{HSTRING, PCWSTR};
 #[cfg(windows)]
-use winapi::um::fileapi::GetDiskFreeSpaceW;
-#[cfg(windows)]
-use winapi::um::fileapi::{
-    FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, GetDriveTypeW, GetVolumeInformationW,
-    GetVolumePathNamesForVolumeNameW, QueryDosDeviceW,
+use windows::Win32::Storage::FileSystem::{
+    FindFirstVolumeW, FindNextVolumeW, FindVolumeClose, GetDiskFreeSpaceW, GetDriveTypeW,
+    GetVolumeInformationW, GetVolumePathNamesForVolumeNameW, QueryDosDeviceW,
 };
 #[cfg(windows)]
-use winapi::um::handleapi::INVALID_HANDLE_VALUE;
-#[cfg(windows)]
-use winapi::um::winbase::DRIVE_REMOTE;
-
-// Warning: the pointer has to be used *immediately* or the Vec
-// it points to will be dropped!
-#[cfg(windows)]
-macro_rules! String2LPWSTR {
-    ($str: expr) => {
-        OsStr::new(&$str)
-            .encode_wide()
-            .chain(Some(0))
-            .collect::<Vec<u16>>()
-            .as_ptr()
-    };
-}
+use windows::Win32::System::WindowsProgramming::DRIVE_REMOTE;
 
 #[cfg(windows)]
 #[allow(non_snake_case)]
@@ -195,7 +178,8 @@ impl MountInfo {
         // set MountInfo::remote
         #[cfg(windows)]
         {
-            self.remote = DRIVE_REMOTE == unsafe { GetDriveTypeW(String2LPWSTR!(self.mount_root)) };
+            self.remote =
+                DRIVE_REMOTE == unsafe { GetDriveTypeW(&HSTRING::from(&self.mount_root)) };
         }
         #[cfg(unix)]
         {
@@ -258,14 +242,15 @@ impl MountInfo {
         volume_name.pop();
         unsafe {
             QueryDosDeviceW(
-                OsStr::new(&volume_name)
-                    .encode_wide()
-                    .chain(Some(0))
-                    .skip(4)
-                    .collect::<Vec<u16>>()
-                    .as_ptr(),
-                dev_name_buf.as_mut_ptr(),
-                dev_name_buf.len() as DWORD,
+                PCWSTR::from_raw(
+                    OsStr::new(&volume_name)
+                        .encode_wide()
+                        .chain(Some(0))
+                        .skip(4)
+                        .collect::<Vec<u16>>()
+                        .as_ptr(),
+                ),
+                Some(&mut dev_name_buf),
             )
         };
         volume_name.push('\\');
@@ -274,41 +259,41 @@ impl MountInfo {
         let mut mount_root_buf = [0u16; MAX_PATH];
         let success = unsafe {
             GetVolumePathNamesForVolumeNameW(
-                String2LPWSTR!(volume_name),
-                mount_root_buf.as_mut_ptr(),
-                mount_root_buf.len() as DWORD,
+                &HSTRING::from(&volume_name),
+                Some(&mut mount_root_buf),
                 ptr::null_mut(),
             )
+            .as_bool()
         };
-        if 0 == success {
+        if !success {
             // TODO: support the case when `GetLastError()` returns `ERROR_MORE_DATA`
             return None;
         }
-        let mount_root = LPWSTR2String(&mount_root_buf);
 
-        let mut fs_type_buf = [0u16; MAX_PATH];
-        let success = unsafe {
-            GetVolumeInformationW(
-                String2LPWSTR!(mount_root),
-                ptr::null_mut(),
-                0,
-                ptr::null_mut(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-                fs_type_buf.as_mut_ptr(),
-                fs_type_buf.len() as DWORD,
-            )
-        };
-        let fs_type = if 0 != success {
-            Some(LPWSTR2String(&fs_type_buf))
-        } else {
-            None
+        let fs_type = {
+            let mut fs_type_buf = [0u16; MAX_PATH];
+            let success = unsafe {
+                GetVolumeInformationW(
+                    PCWSTR::from_raw(mount_root_buf.as_ptr()),
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(&mut fs_type_buf),
+                )
+                .as_bool()
+            };
+            if success {
+                Some(LPWSTR2String(&fs_type_buf))
+            } else {
+                None
+            }
         };
         let mut mn_info = Self {
             dev_id: volume_name,
             dev_name,
             fs_type: fs_type.unwrap_or_else(|| "".to_string()),
-            mount_root,
+            mount_root: LPWSTR2String(&mount_root_buf),
             mount_dir: "".to_string(),
             mount_option: "".to_string(),
             remote: false,
@@ -443,16 +428,9 @@ pub fn read_fs_list() -> Result<Vec<MountInfo>, std::io::Error> {
     {
         let mut volume_name_buf = [0u16; MAX_PATH];
         // As recommended in the MS documentation, retrieve the first volume before the others
-        let find_handle = unsafe {
-            FindFirstVolumeW(volume_name_buf.as_mut_ptr(), volume_name_buf.len() as DWORD)
-        };
-        if INVALID_HANDLE_VALUE == find_handle {
-            crash!(
-                EXIT_ERR,
-                "FindFirstVolumeW failed: {}",
-                IOError::last_os_error()
-            );
-        }
+        let find_handle = unsafe { FindFirstVolumeW(&mut volume_name_buf) }.unwrap_or_else(|err| {
+            crash!(EXIT_ERR, "FindFirstVolumeW failed: {}", err);
+        });
         let mut mounts = Vec::<MountInfo>::new();
         loop {
             let volume_name = LPWSTR2String(&volume_name_buf);
@@ -463,16 +441,8 @@ pub fn read_fs_list() -> Result<Vec<MountInfo>, std::io::Error> {
             if let Some(m) = MountInfo::new(volume_name) {
                 mounts.push(m);
             }
-            if 0 == unsafe {
-                FindNextVolumeW(
-                    find_handle,
-                    volume_name_buf.as_mut_ptr(),
-                    volume_name_buf.len() as DWORD,
-                )
-            } {
-                let err = IOError::last_os_error();
-                if err.raw_os_error() != Some(winapi::shared::winerror::ERROR_NO_MORE_FILES as i32)
-                {
+            if let Err(err) = unsafe { FindNextVolumeW(find_handle, &mut volume_name_buf) }.ok() {
+                if err.code() != windows::Win32::Foundation::ERROR_NO_MORE_FILES.to_hresult() {
                     crash!(EXIT_ERR, "FindNextVolumeW failed: {}", err);
                 }
                 break;
@@ -522,13 +492,12 @@ impl FsUsage {
         let success = unsafe {
             GetVolumePathNamesForVolumeNameW(
                 //path_utf8.as_ptr(),
-                String2LPWSTR!(path.as_os_str()),
-                root_path.as_mut_ptr(),
-                root_path.len() as DWORD,
+                &HSTRING::from(path.as_os_str()),
+                Some(&mut root_path),
                 ptr::null_mut(),
             )
         };
-        if 0 == success {
+        if 0 == success.0 {
             crash!(
                 EXIT_ERR,
                 "GetVolumePathNamesForVolumeNameW failed: {}",
@@ -543,14 +512,14 @@ impl FsUsage {
 
         let success = unsafe {
             GetDiskFreeSpaceW(
-                String2LPWSTR!(path.as_os_str()),
-                &mut sectors_per_cluster,
-                &mut bytes_per_sector,
-                &mut number_of_free_clusters,
-                &mut total_number_of_clusters,
+                &HSTRING::from(path.as_os_str()),
+                Some(&mut sectors_per_cluster),
+                Some(&mut bytes_per_sector),
+                Some(&mut number_of_free_clusters),
+                Some(&mut total_number_of_clusters),
             )
         };
-        if 0 == success {
+        if 0 == success.0 {
             // Fails in case of CD for example
             // crash!(
             //     EXIT_ERR,

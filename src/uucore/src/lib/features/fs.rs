@@ -30,6 +30,10 @@ use std::os::unix::{fs::MetadataExt, io::AsRawFd};
 use std::path::{Component, Path, PathBuf, MAIN_SEPARATOR};
 #[cfg(target_os = "windows")]
 use winapi_util::AsHandleRef;
+#[cfg(target_os = "windows")]
+use windows::Win32::Storage::FileSystem::{
+    FILE_FLAGS_AND_ATTRIBUTES, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
+};
 
 #[cfg(unix)]
 #[macro_export]
@@ -79,12 +83,12 @@ impl FileInformation {
             use std::fs::OpenOptions;
             use std::os::windows::prelude::*;
             let mut open_options = OpenOptions::new();
-            let mut custom_flags = 0;
+            let mut custom_flags = FILE_FLAGS_AND_ATTRIBUTES::default();
             if !dereference {
-                custom_flags |= winapi::um::winbase::FILE_FLAG_OPEN_REPARSE_POINT;
+                custom_flags |= FILE_FLAG_OPEN_REPARSE_POINT;
             }
-            custom_flags |= winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
-            open_options.custom_flags(custom_flags);
+            custom_flags |= FILE_FLAG_BACKUP_SEMANTICS;
+            open_options.custom_flags(custom_flags.0);
             let file = open_options.read(true).open(path.as_ref())?;
             Self::from_file(&file)
         }

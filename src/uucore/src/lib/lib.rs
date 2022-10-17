@@ -6,8 +6,6 @@
 // * feature-gated external crates (re-shared as public internal modules)
 #[cfg(feature = "libc")]
 pub extern crate libc;
-#[cfg(feature = "winapi")]
-pub extern crate winapi;
 
 //## internal modules
 
