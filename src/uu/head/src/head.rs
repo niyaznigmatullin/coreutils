@@ -387,13 +387,13 @@ where
             }
             // if it were just `n`,
             if lines == n + 1 {
-                input.seek(SeekFrom::Start(0))?;
+                input.rewind()?;
                 return Ok(size - i);
             }
             i += 1;
         }
         if size - i == 0 {
-            input.seek(SeekFrom::Start(0))?;
+            input.rewind()?;
             return Ok(0);
         }
     }

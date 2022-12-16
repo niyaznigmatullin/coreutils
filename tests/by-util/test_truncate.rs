@@ -19,7 +19,7 @@ fn test_increase_file_size() {
     ucmd.args(&["-s", "+5K", FILE1]).succeeds();
 
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -36,7 +36,7 @@ fn test_increase_file_size_kb() {
     ucmd.args(&["-s", "+5KB", FILE1]).succeeds();
 
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -66,7 +66,7 @@ fn test_reference() {
         .succeeds();
 
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -83,7 +83,7 @@ fn test_decrease_file_size() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size=-4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -100,7 +100,7 @@ fn test_space_in_size() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", " 4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -134,7 +134,7 @@ fn test_at_most_shrinks() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", "<4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -151,7 +151,7 @@ fn test_at_most_no_change() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", "<40", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -168,7 +168,7 @@ fn test_at_least_grows() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", ">15", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -185,7 +185,7 @@ fn test_at_least_no_change() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", ">4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -202,7 +202,7 @@ fn test_round_down() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", "/4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -219,7 +219,7 @@ fn test_round_up() {
     file.write_all(b"1234567890").unwrap();
     ucmd.args(&["--size", "%4", FILE2]).succeeds();
     file.seek(SeekFrom::End(0)).unwrap();
-    let actual = file.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
@@ -238,7 +238,7 @@ fn test_size_and_reference() {
     ucmd.args(&["--reference", FILE1, "--size", "+5", FILE2])
         .succeeds();
     file2.seek(SeekFrom::End(0)).unwrap();
-    let actual = file2.seek(SeekFrom::Current(0)).unwrap();
+    let actual = file2.stream_position().unwrap();
     assert!(
         expected == actual,
         "expected '{}' got '{}'",
