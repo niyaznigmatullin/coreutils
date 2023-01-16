@@ -17,7 +17,7 @@ path = "src/dd.rs"
 [dependencies]
 byte-unit = "4.0"
 clap = { version = "4.0", features = ["wrap_help", "cargo"] }
-gcd = "2.0"
+gcd = "2.3"
 libc = "0.2"
 uucore = { version=">=0.0.16", package="uucore", path="../../uucore" }
 
