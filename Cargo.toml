@@ -495,7 +495,7 @@ hex-literal = "0.4.1"
 rstest = "0.17.0"
 
 [target.'cfg(any(target_os = "linux", target_os = "android"))'.dev-dependencies]
-procfs = { version = "0.15", default-features = false }
+procfs = { git = "https://github.com/eminence/procfs.git", default-features = false }
 rlimit = "0.9.1"
 
 [target.'cfg(unix)'.dev-dependencies]
