@@ -1839,6 +1839,14 @@ fn test_closes_file_descriptors() {
         .succeeds();
 }
 
+#[cfg(target_os = "android")]
+#[test]
+fn test_debug_android() {
+    use procfs::process::Process;
+    let me = Process::myself();
+    assert!(me.is_ok());
+}
+
 #[cfg(any(target_os = "linux", target_os = "android"))]
 #[test]
 fn test_cp_sparse_never_empty() {
