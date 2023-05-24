@@ -1845,6 +1845,8 @@ fn test_debug_android() {
     use procfs::process::Process;
     let me = Process::myself();
     assert!(me.is_ok());
+    let me = me.unwrap();
+    assert!(me.fd_count().is_ok());
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
