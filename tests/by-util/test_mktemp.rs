@@ -28,8 +28,10 @@ static TEST_TEMPLATE8: &str = "tempXXXl/ate";
 #[cfg(windows)]
 static TEST_TEMPLATE8: &str = "tempXXXl\\ate";
 
+const UNIX_TMPDIR: &str = "TMPDIR";
+
 #[cfg(not(windows))]
-const TMPDIR: &str = "TMPDIR";
+const TMPDIR: &str = UNIX_TMPDIR;
 #[cfg(windows)]
 const TMPDIR: &str = "TMP";
 
@@ -983,4 +985,24 @@ fn test_missing_short_tmpdir_flag() {
         .fails()
         .no_stdout()
         .stderr_contains("a value is required for '-p <DIR>' but none was supplied");
+}
+
+#[test]
+fn test_unix_tmpdir_override() {
+    let (at, mut ucmd) = at_and_ucmd!();
+    let new_tmpdir = "new_tmpdir";
+    at.mkdir(new_tmpdir);
+    let result = ucmd
+        .env(UNIX_TMPDIR, new_tmpdir)
+        .arg("--tmpdir")
+        .arg(TEST_TEMPLATE1)
+        .succeeds();
+    let filename = result.no_stderr().stdout_str().trim_end();
+
+    #[cfg(not(windows))]
+    assert_matches_template!(&format!("{new_tmpdir}/{TEST_TEMPLATE1}"), filename);
+    #[cfg(windows)]
+    assert_suffix_matches_template!(TEST_TEMPLATE1, filename);
+
+    assert!(at.file_exists(filename));
 }
